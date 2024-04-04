@@ -68,9 +68,9 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
         'Tagging',
         'WebsiteRedirectLocation',
         'ChecksumAlgorithm',
-        'CopySSECustomerAlgorithm',
-        'CopySSECustomerKey',
-        'CopySSECustomerKeyMD5',
+        'CopySourceSSECustomerAlgorithm',
+        'CopySourceSSECustomerKey',
+        'CopySourceSSECustomerKeyMD5',
     ];
     /**
      * @var string[]
