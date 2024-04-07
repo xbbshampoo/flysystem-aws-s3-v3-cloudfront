@@ -438,7 +438,7 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
                 $this->bucket,
                 $this->prefixer->prefixPath($destination),
                 $this->visibility->visibilityToAcl($visibility ?: 'private'),
-                $this->createOptionsFromConfig($config)
+                $this->createOptionsFromConfig($config)['params']
             );
         } catch (Throwable $exception) {
             throw UnableToCopyFile::fromLocationTo($source, $destination, $exception);
