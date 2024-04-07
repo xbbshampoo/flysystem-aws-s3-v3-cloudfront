@@ -340,6 +340,40 @@ class AwsS3V3AdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function moving_without_updated_metadata(): void
+    {
+        $adapter = $this->adapter();
+        $adapter->write('source.txt', 'contents to be moved', new Config(['ContentType' => 'text/plain']));
+        $mimeTypeSource = $adapter->mimeType('source.txt')->mimeType();
+        $this->assertSame('text/plain', $mimeTypeSource);
+
+        $adapter->move('source.txt', 'destination.txt', new Config(
+            ['ContentType' => 'text/plain+special']
+        ));
+        $mimeTypeDestination = $adapter->mimeType('destination.txt')->mimeType();
+        $this->assertSame('text/plain', $mimeTypeDestination);
+    }
+
+    /**
+     * @test
+     */
+    public function copying_with_updated_metadata(): void
+    {
+        $adapter = $this->adapter();
+        $adapter->write('source.txt', 'contents to be moved', new Config(['ContentType' => 'text/plain']));
+        $mimeTypeSource = $adapter->mimeType('source.txt')->mimeType();
+        $this->assertSame('text/plain', $mimeTypeSource);
+
+        $adapter->copy('source.txt', 'destination.txt', new Config(
+            ['ContentType' => 'text/plain+special', 'MetadataDirective' => 'REPLACE']
+        ));
+        $mimeTypeDestination = $adapter->mimeType('destination.txt')->mimeType();
+        $this->assertSame('text/plain+special', $mimeTypeDestination);
+    }
+
+    /**
+     * @test
+     */
     public function setting_acl_via_options(): void
     {
         $adapter = $this->adapter();
