@@ -6,6 +6,7 @@ namespace League\Flysystem\AwsS3V3;
 
 use Aws\Api\DateTimeResult;
 use Aws\S3\S3ClientInterface;
+use Aws\CloudFront\UrlSigner;
 use DateTimeInterface;
 use Generator;
 use League\Flysystem\ChecksumAlgoIsNotSupported;
@@ -72,6 +73,7 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
         'CopySourceSSECustomerKey',
         'CopySourceSSECustomerKeyMD5',
     ];
+
     /**
      * @var string[]
      */
@@ -95,7 +97,9 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
     ];
 
     private PathPrefixer $prefixer;
+
     private VisibilityConverter $visibility;
+
     private MimeTypeDetector $mimeTypeDetector;
 
     public function __construct(
@@ -314,7 +318,7 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
         $fileSize = $metadata['ContentLength'] ?? $metadata['Size'] ?? null;
         $fileSize = $fileSize === null ? null : (int) $fileSize;
         $dateTime = $metadata['LastModified'] ?? null;
-        $lastModified = $dateTime instanceof DateTimeResult ? $dateTime->getTimeStamp() : null;
+        $lastModified = $dateTime instanceof DateTimeResult ? $dateTime->getTimestamp() : null;
 
         return new FileAttributes(
             $path,
@@ -513,5 +517,83 @@ class AwsS3V3Adapter implements FilesystemAdapter, PublicUrlGenerator, ChecksumP
         } catch (Throwable $exception) {
             throw UnableToGenerateTemporaryUrl::dueToError($path, $exception);
         }
+    }
+
+    /**
+     * Get a CloudFront URL for the file at the given path.
+     *
+     * @param  string             $path
+     * @param  \DateTimeInterface $expiration
+     * @param  array              $options
+     * @return string
+     */
+    public function getCloudFrontUrl($path, $expiration, array $options = [])
+    {
+        $options = array_merge($options, $this->options);
+
+        if (empty($options['endpoint'])) {
+            return;
+        }
+
+        $options['algo'] = $options['algo'] ?? 'cloudfront';
+
+        if ($options['algo'] === 'hmac' && !empty($options['hmac_key_pair_id']) && !empty($options['hmac_passphrase'])) {
+            $urlSigner = new HmacSigner(
+                $options['hmac_key_pair_id'],
+                $options['hmac_passphrase']
+            );
+
+            return $urlSigner->getSignedUrl(
+                rtrim($options['endpoint'], '/') . '/' . ltrim($path, '/'),
+                $expiration->getTimestamp(),
+                isset($options['payload']) ? $options['payload'] : []
+            );
+        } elseif ($options['algo'] === 'cloudfront' && !empty($options['key_pair_id']) && !empty($options['private_key'])) {
+            $urlSigner = new UrlSigner(
+                $options['key_pair_id'],
+                $options['private_key']
+            );
+
+            return $urlSigner->getSignedUrl(
+                rtrim($options['endpoint'], '/') . '/' . ltrim($path, '/'),
+                $expiration->getTimestamp(),
+                isset($options['policy']) ? $options['policy'] : null
+            );
+        }
+
+        throw new \LogicException('Invalid algorithm provided.');
+    }
+
+    /**
+     * Get a temporary URL for the file at the given path.
+     *
+     * @param  string             $path
+     * @param  \DateTimeInterface $expiration
+     * @param  array              $options
+     * @return string
+     */
+    public function getTemporaryUrl($path, $expiration, array $options = [])
+    {
+        $cloudfront_url = $this->getCloudFrontUrl($path, $expiration, $options);
+
+        if ($cloudfront_url) {
+            return $cloudfront_url;
+        }
+
+        $command = $this->client->getCommand(
+            'GetObject',
+            array_merge(
+                [
+                    'Bucket' => $this->bucket,
+                    'Key' => $this->prefixer->prefixPath($path),
+                ],
+                $options
+            )
+        );
+
+        return (string) $this->client->createPresignedRequest(
+            $command,
+            $expiration
+        )->getUri();
     }
 }

@@ -243,9 +243,9 @@ class AwsS3V3AdapterTest extends FilesystemAdapterTestCase
 
     public static function dpFailingMetadataGetters(): iterable
     {
-        yield "mimeType" => [UnableToRetrieveMetadata::mimeType('filename.txt'), 'mimeType'];
-        yield "lastModified" => [UnableToRetrieveMetadata::lastModified('filename.txt'), 'lastModified'];
-        yield "fileSize" => [UnableToRetrieveMetadata::fileSize('filename.txt'), 'fileSize'];
+        yield 'mimeType' => [UnableToRetrieveMetadata::mimeType('filename.txt'), 'mimeType'];
+        yield 'lastModified' => [UnableToRetrieveMetadata::lastModified('filename.txt'), 'lastModified'];
+        yield 'fileSize' => [UnableToRetrieveMetadata::fileSize('filename.txt'), 'fileSize'];
     }
 
     /**
@@ -285,8 +285,8 @@ class AwsS3V3AdapterTest extends FilesystemAdapterTestCase
 
     public static function casesWhereHttpStreamingInfluencesSeekability(): Generator
     {
-        yield "not streaming reads have seekable stream" => [false, true];
-        yield "streaming reads have non-seekable stream" => [true, false];
+        yield 'not streaming reads have seekable stream' => [false, true];
+        yield 'streaming reads have non-seekable stream' => [true, false];
     }
 
     /**
